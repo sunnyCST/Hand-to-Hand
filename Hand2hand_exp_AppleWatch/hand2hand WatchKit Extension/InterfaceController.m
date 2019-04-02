@@ -24,6 +24,7 @@
 @property (weak, nonatomic) IBOutlet WKInterfaceButton *buttonDeleteFiles;
 @property (weak, nonatomic) IBOutlet WKInterfaceButton *buttonSendFiles;
 @property (weak, nonatomic) IBOutlet WKInterfaceButton *buttonCommunication;
+@property (weak, nonatomic) IBOutlet WKInterfaceButton *buttonMicrophone;
 @property (weak, nonatomic) IBOutlet WKInterfaceLabel *label0;
 
 @property (strong, nonatomic) CMMotionManager *motionManager;
@@ -64,6 +65,7 @@ NSString *logFileName;
 bool const HEALTH_MONITORING = false;
 
 // audio
+bool audioMinitoring = true;
 NSString *audioFileName;
 
 //  core bluetooth
@@ -121,10 +123,14 @@ CBCharacteristic *subscribedCharacteristic;
 - (void)parseCommand:(NSString *)command {
     if ([command isEqualToString:@"log on"]) {
         [self changeLogStatus:true];
-        [self startAudioRecording];
+        if (audioMinitoring) {
+            [self startAudioRecording];
+        }
     } else if ([command isEqualToString:@"log off"]) {
         [self changeLogStatus:false];
-        [self stopAudioRecording];
+        if (audioMinitoring) {
+            [self stopAudioRecording];
+        }
     } else if ([command isEqualToString:@"test watch connectivity success"]) {
         watchConnectivityTestFlag = true;
     } else {
@@ -217,6 +223,15 @@ CBCharacteristic *subscribedCharacteristic;
     [self startCommunication];
 }
 
+- (IBAction)doClickButtonMicrophone:(id)sender {
+    audioMinitoring = !audioMinitoring;
+    if (audioMinitoring) {
+        [self.buttonMicrophone setTitle:@"Microphone: On"];
+    } else {
+        [self.buttonMicrophone setTitle:@"Microphone: Off"];
+    }
+}
+
 
 
 //
@@ -232,6 +247,7 @@ CBCharacteristic *subscribedCharacteristic;
         freqCnt++;
         CMAcceleration acceleration = motion.userAcceleration;
         CMAttitude *attitude = motion.attitude;
+        CMQuaternion quaternion = attitude.quaternion;
         CMRotationRate rotationRate = motion.rotationRate;
         //CMAcceleration gravity = motion.gravity;
         //CMCalibratedMagneticField magneticField = motion.magneticField;
@@ -241,7 +257,8 @@ CBCharacteristic *subscribedCharacteristic;
             NSLog(@"freqAcc: %f", freq);
         }
         if (logging) {
-            buffer = [buffer stringByAppendingString:[NSString stringWithFormat:@"time %f\nacc %f %f %f\natt %f %f %f\nrot %f %f %f\n", motion.timestamp, acceleration.x, acceleration.y, acceleration.z, attitude.pitch, attitude.roll, attitude.yaw, rotationRate.x, rotationRate.y, rotationRate.z]];
+            // buffer = [buffer stringByAppendingString:[NSString stringWithFormat:@"time %f\nacc %f %f %f\natt %f %f %f\nrot %f %f %f\n", motion.timestamp, acceleration.x, acceleration.y, acceleration.z, attitude.pitch, attitude.roll, attitude.yaw, rotationRate.x, rotationRate.y, rotationRate.z]];
+            buffer = [buffer stringByAppendingString:[NSString stringWithFormat:@"time %f\nacc %f %f %f\nrot %f %f %f\nqua %f %f %f %f\n", motion.timestamp, acceleration.x, acceleration.y, acceleration.z, rotationRate.x, rotationRate.y, rotationRate.z, quaternion.w, quaternion.x, quaternion.y, quaternion.z]];
             if (buffer.length > LOG_BUFFER_MAX_SIZE) {
                 [self writeFile:logFileName content:buffer];
                 buffer = @"";
